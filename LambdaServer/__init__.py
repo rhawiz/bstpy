@@ -13,7 +13,8 @@ sys.path.append('.')
 __author__ = 'OpenDog'
 __description__ = 'A local http server that exposes an AWS lambda.'
 
-version = pkg_resources.require("LambdaServer")[0].version
+# version = pkg_resources.require("LambdaServer")[0].version
+version = 0.0
 
 
 def main(argv):
@@ -50,7 +51,7 @@ def main(argv):
             sys.exit()
         elif opt in ("-p", "--port"):
             try:
-                server_port=int(arg)
+                server_port = int(arg)
             except ValueError:
                 print "Invalid port: {}".format(server_port)
                 print usage
@@ -137,6 +138,7 @@ def run(lambda_path, server_class=HTTPServer, port=10000):
             self.end_headers()
 
         def do_POST(self):
+
             data_string = self.rfile.read(int(self.headers['Content-Length']))
 
             print("==> {}".format(data_string))
@@ -156,7 +158,50 @@ def run(lambda_path, server_class=HTTPServer, port=10000):
                 }
 
             return_value = simplejson.dumps(r, indent=4 * ' ')
-            self._set_headers(return_value);
+            self._set_headers(return_value)
+
+            self.wfile.write(return_value)
+            self.wfile.close()
+
+            print("<=== {}".format(return_value))
+
+            return
+
+        def do_GET(self):
+            data = {}
+
+            try:
+                ftype, func_attr, time, lat_lng = self.path.lstrip("/").rstrip("/").split("/")
+                data = {
+                    "params": {
+                        "path": {
+                            "functionAttribute": func_attr,
+                            "latLng": lat_lng,
+                            "type": ftype,
+                            "time": time
+                        }
+                    }
+                }
+
+            except Exception as e:
+                print e
+
+            print("==> {}".format(data))
+
+            # noinspection PyBroadException
+            try:
+                context = LambdaContext(lambda_path)
+                handler = import_lambda(lambda_path)
+                r = handler(data, context)
+            except Exception as e:
+                print("\nOops! There was a problem in your lambda function: {}\n".format(lambda_path))
+                print(traceback.format_exc())
+                r = {
+                    'error': str(e)
+                }
+
+            return_value = simplejson.dumps(r, indent=4 * ' ')
+            self._set_headers(return_value)
 
             self.wfile.write(return_value)
             self.wfile.close()
@@ -170,3 +215,8 @@ def run(lambda_path, server_class=HTTPServer, port=10000):
     print("Starting httpd on port " + str(port))
     httpd.serve_forever()
 
+
+from sys import argv
+
+if __name__ == '__main__':
+    main(argv[1:])

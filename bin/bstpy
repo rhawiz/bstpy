@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 import LambdaServer
 from sys import argv
 
