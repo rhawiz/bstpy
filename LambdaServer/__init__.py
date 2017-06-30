@@ -13,9 +13,7 @@ sys.path.append('.')
 __author__ = 'OpenDog'
 __description__ = 'A local http server that exposes an AWS lambda.'
 
-# version = pkg_resources.require("LambdaServer")[0].version
-version = 0.0
-
+version = pkg_resources.require("LambdaServer")[0].version
 
 def main(argv):
     import time
